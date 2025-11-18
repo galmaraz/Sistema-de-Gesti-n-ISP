@@ -2,6 +2,12 @@
 
 export type UserRole = 'admin' | 'technician' | 'support';
 
+ export interface ApiResponse<T> {
+  data: T;
+  total?: number;
+  message?: string;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -13,7 +19,8 @@ export interface User {
 
 export interface Client {
   _id?: string;
-  nombre: string;
+  id?: string;
+  name: string;
   ci: string;
   direccion: string;
   telefono: string;
@@ -22,9 +29,24 @@ export interface Client {
   fechaRegistro?: Date;
 }
 
+ export interface ApiClient {
+  _id?: string;
+  id?: string;
+  name?: string;
+  nombre?: string;
+  ci?: string;
+  direccion?: string;
+  telefono?: string;
+  email?: string;
+  estado?: 'activo' | 'inactivo' | 'suspendido';
+  status?: 'activo' | 'inactivo' | 'suspendido';
+  fechaRegistro?: string;
+}
+
 
 export interface Plan {
   id: string;
+  _id?: string; 
   name: string;
   downloadSpeed: number; // Mbps
   uploadSpeed: number; // Mbps
@@ -35,27 +57,40 @@ export interface Plan {
   updatedAt: Date;
 }
 
+
 export interface Contract {
   id: string;
-  clientId: string;
-  planId: string;
-  routerId: string;
-  pppoeUsername: string;
-  pppoePassword: string;
-  status: 'active' | 'suspended' | 'cancelled';
-  startDate: Date;
-  endDate?: Date;
+  clientId?: string;
+  planId?: string;
+  routerId?: string;
+  usuarioPPPoE: string;
+  contrasenaPPPoE: string;
+  estado: 'active' | 'suspended' | 'cancelled'; 
+  fechaInicio: Date; 
+  fechaFin?: Date; 
   monthlyFee: number;
   createdAt: Date;
   updatedAt: Date;
-  // Populated fields
   client?: Client;
   plan?: Plan;
   router?: Router;
 }
 
+
+export interface CreateContractDTO {
+  clientId: string;
+  planId: string;
+  routerId: string;
+  fechaInicio: Date;
+  estado: 'active' | 'suspended' | 'cancelled';
+  monthlyFee: number;
+}
+
+
+
 export interface Router {
   id: string;
+  _id?: string;
   name: string;
   ip: string;
   port: number;

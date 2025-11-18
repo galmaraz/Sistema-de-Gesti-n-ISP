@@ -5,7 +5,7 @@ import { Login } from './modules/auth/Login';
 import { Dashboard } from './modules/dashboard/Dashboard';
 import { ClientsPage } from './modules/clients/ClientsPage';
 import { PlansPage } from './modules/plans/PlansPage';
-import { ContractsPage } from './modules/contracts/ContractsPage';
+import  ContractsPage  from './modules/contracts/ContractsPage';
 import { RoutersPage } from './modules/routers/RoutersPage';
 import { MonitoringPage } from './modules/monitoring/MonitoringPage';
 import { Toaster } from './components/ui/sonner';

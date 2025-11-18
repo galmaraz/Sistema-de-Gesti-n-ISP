@@ -5,36 +5,22 @@ import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../../components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogDescription, DialogHeader,
+  DialogTitle, DialogFooter,
 } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../components/ui/select';
 import { Plus, Search, Edit, Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Interfaz adaptada al backend
 export interface Client {
   _id?: string;
-  nombre: string;
+  name: string;
   ci: string;
   direccion: string;
   telefono: string;
@@ -53,7 +39,7 @@ export const ClientsPage: React.FC = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   const [formData, setFormData] = useState({
-    nombre: '',
+    name: '',
     ci: '',
     direccion: '',
     telefono: '',
@@ -66,39 +52,32 @@ export const ClientsPage: React.FC = () => {
     loadClients();
   }, []);
 
+  // Aplicar filtros cuando cambien los clientes, término de búsqueda o filtro de estado
   useEffect(() => {
     filterClients();
   }, [clients, searchTerm, statusFilter]);
 
-  // Cargar clientes desde backend
   const loadClients = async () => {
     setIsLoading(true);
     try {
-      const data = await apiService.getClients(); // backend devuelve { _id, nombre, ci, ... }
-      // Solo agregamos id para keys en React
-      const mappedClients = data.map((c: Client) => ({
-        ...c,
-        id: c._id,
-      }));
-      setClients(mappedClients);
+      const data = await apiService.getClients();
+      setClients(data);
     } catch (error) {
-      console.error(error);
+      console.error('Error al cargar clientes:', error);
       toast.error('Error al cargar clientes');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Filtros
   const filterClients = () => {
     let filtered = [...clients];
 
     if (searchTerm) {
-      filtered = filtered.filter(
-        client =>
-          client.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          client.ci.includes(searchTerm) ||
-          client.email.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(client =>
+        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.ci.includes(searchTerm) ||
+        client.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -109,22 +88,21 @@ export const ClientsPage: React.FC = () => {
     setFilteredClients(filtered);
   };
 
-  // Abrir modal para crear/editar
   const handleOpenDialog = (client?: Client) => {
     if (client) {
       setEditingClient(client);
       setFormData({
-        nombre: client.nombre,
-        ci: client.ci,
-        direccion: client.direccion,
-        telefono: client.telefono,
-        email: client.email,
+        name: client.name || '',
+        ci: client.ci || '',
+        direccion: client.direccion || '',
+        telefono: client.telefono || '',
+        email: client.email || '',
         estado: client.estado || 'activo',
       });
     } else {
       setEditingClient(null);
       setFormData({
-        nombre: '',
+        name: '',
         ci: '',
         direccion: '',
         telefono: '',
@@ -135,33 +113,61 @@ export const ClientsPage: React.FC = () => {
     setDialogOpen(true);
   };
 
-  // Guardar cliente
   const handleSubmit = async () => {
     try {
-      if (editingClient) {
-        await apiService.updateClient(editingClient._id!, formData);
-        toast.success('Cliente actualizado exitosamente');
+      if (!formData.name || !formData.ci || !formData.telefono || !formData.email || !formData.direccion) {
+        toast.error('Complete todos los campos requeridos');
+        return;
+      }
+
+      if (editingClient && editingClient._id) {
+        // Actualización optimista
+        const updatedClients = clients.map(client => 
+          client._id === editingClient._id 
+            ? { ...client, ...formData }
+            : client
+        );
+        
+        setClients(updatedClients);
+        setDialogOpen(false);
+
+        try {
+          await apiService.updateClient(editingClient._id, formData);
+          toast.success('Cliente actualizado exitosamente');
+          // Recargar para consistencia
+          setTimeout(() => {
+            loadClients();
+          }, 1000);
+        } catch (error) {
+          // Revertir cambios si falla el backend
+          loadClients();
+          toast.error('Error al actualizar cliente');
+        }
       } else {
         await apiService.createClient(formData);
         toast.success('Cliente creado exitosamente');
+        setDialogOpen(false);
+        loadClients();
       }
-      setDialogOpen(false);
-      loadClients();
     } catch (error) {
-      console.error(error);
+      console.error('Error al guardar cliente:', error);
       toast.error('Error al guardar cliente');
     }
   };
 
-  // Eliminar cliente
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (_id: string) => {
+    if (!_id) {
+      toast.error('Error: ID inválido');
+      return;
+    }
+
     if (confirm('¿Está seguro de eliminar este cliente?')) {
       try {
-        await apiService.deleteClient(id);
+        await apiService.deleteClient(_id);
         toast.success('Cliente eliminado exitosamente');
         loadClients();
       } catch (error) {
-        console.error(error);
+        console.error('Error al eliminar cliente:', error);
         toast.error('Error al eliminar cliente');
       }
     }
@@ -169,21 +175,23 @@ export const ClientsPage: React.FC = () => {
 
   const getStatusBadge = (estado?: string) => {
     const variants = {
-      activo: { label: 'Activo', className: 'bg-green-100 text-green-800' },
-      inactivo: { label: 'Inactivo', className: 'bg-gray-100 text-gray-800' },
-      suspendido: { label: 'Suspendido', className: 'bg-yellow-100 text-yellow-800' },
+      activo: { label: 'Activo', className: 'bg-green-100 text-green-800 border-green-200' },
+      inactivo: { label: 'Inactivo', className: 'bg-gray-100 text-gray-800 border-gray-200' },
+      suspendido: { label: 'Suspendido', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
     };
+    
     const variant = variants[estado as keyof typeof variants] || variants.inactivo;
-    return <Badge className={variant.className}>{variant.label}</Badge>;
+    
+    return <Badge variant="outline" className={variant.className}>{variant.label}</Badge>;
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-gray-900 mb-2">Gestión de Clientes</h1>
-          <p className="text-gray-500">Administra la base de datos de clientes</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Gestión de Clientes</h1>
+          <p className="text-gray-600">Administra la base de datos de clientes</p>
         </div>
         <Button onClick={() => handleOpenDialog()}>
           <Plus className="w-4 h-4 mr-2" />
@@ -222,7 +230,7 @@ export const ClientsPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Tabla de clientes */}
+      {/* Tabla */}
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -240,39 +248,51 @@ export const ClientsPage: React.FC = () => {
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                    Cargando...
+                    Cargando clientes...
                   </TableCell>
                 </TableRow>
               ) : filteredClients.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                    No se encontraron clientes
+                    {clients.length === 0 ? 'No hay clientes registrados' : 'No se encontraron clientes con los filtros aplicados'}
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredClients.map(client => (
-                  <TableRow key={client._id}>
+                  <TableRow key={String(client._id)} className="hover:bg-gray-50">
                     <TableCell>
                       <div className="flex items-center">
                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
                           <User className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                          <p className="text-gray-900">{client.nombre}</p>
+                          <p className="font-medium text-gray-900">{client.name}</p>
                           <p className="text-sm text-gray-500">{client.email}</p>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-gray-600">{client.ci}</TableCell>
-                    <TableCell className="text-gray-600">{client.telefono}</TableCell>
-                    <TableCell className="text-gray-600 max-w-xs truncate">{client.direccion}</TableCell>
+                    <TableCell className="font-mono">{client.ci}</TableCell>
+                    <TableCell>{client.telefono}</TableCell>
+                    <TableCell className="max-w-xs truncate" title={client.direccion}>
+                      {client.direccion}
+                    </TableCell>
                     <TableCell>{getStatusBadge(client.estado)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(client)}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleOpenDialog(client)}
+                          title="Editar cliente"
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(client._id!)}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDelete(String(client._id))}
+                          title="Eliminar cliente"
+                        >
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
                       </div>
@@ -285,29 +305,33 @@ export const ClientsPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Modal Crear/Editar */}
+      {/* Modal */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
+            <DialogTitle className="text-xl">
+              {editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}
+            </DialogTitle>
             <DialogDescription>
               {editingClient ? 'Actualiza la información del cliente' : 'Completa los datos del nuevo cliente'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            {/* Nombre */}
             <div className="grid gap-2">
-              <Label htmlFor="name">Nombre Completo</Label>
+              <Label htmlFor="name">Nombre Completo *</Label>
               <Input
                 id="name"
-                value={formData.nombre}
-                onChange={e => setFormData({ ...formData, nombre: e.target.value })}
-                placeholder="Ej: Juan Pérez García"
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ej: Juan Pérez"
               />
             </div>
 
+            {/* CI */}
             <div className="grid gap-2">
-              <Label htmlFor="ci">Cédula de Identidad</Label>
+              <Label htmlFor="ci">Cédula de Identidad *</Label>
               <Input
                 id="ci"
                 value={formData.ci}
@@ -316,45 +340,51 @@ export const ClientsPage: React.FC = () => {
               />
             </div>
 
+            {/* Teléfono */}
             <div className="grid gap-2">
-              <Label htmlFor="telefono">Teléfono</Label>
+              <Label htmlFor="telefono">Teléfono *</Label>
               <Input
                 id="telefono"
                 value={formData.telefono}
                 onChange={e => setFormData({ ...formData, telefono: e.target.value })}
-                placeholder="Ej: +591 70123456"
+                placeholder="Ej: 78945612"
               />
             </div>
 
+            {/* Email */}
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
-                placeholder="cliente@email.com"
+                placeholder="Ej: cliente@email.com"
               />
             </div>
 
+            {/* Dirección */}
             <div className="grid gap-2">
-              <Label htmlFor="direccion">Dirección</Label>
+              <Label htmlFor="direccion">Dirección *</Label>
               <Input
                 id="direccion"
                 value={formData.direccion}
                 onChange={e => setFormData({ ...formData, direccion: e.target.value })}
-                placeholder="Calle, número, zona"
+                placeholder="Ej: Calle Falsa 123"
               />
             </div>
 
+            {/* Estado */}
             <div className="grid gap-2">
               <Label htmlFor="estado">Estado</Label>
               <Select
                 value={formData.estado}
-                onValueChange={value => setFormData({ ...formData, estado: value })}
+                onValueChange={(value: 'activo' | 'inactivo' | 'suspendido') => 
+                  setFormData({ ...formData, estado: value })
+                }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Seleccione un estado" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="activo">Activo</SelectItem>
@@ -369,7 +399,12 @@ export const ClientsPage: React.FC = () => {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit}>{editingClient ? 'Actualizar' : 'Crear'}</Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={!formData.name || !formData.ci || !formData.telefono || !formData.email || !formData.direccion}
+            >
+              {editingClient ? 'Actualizar Cliente' : 'Crear Cliente'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
