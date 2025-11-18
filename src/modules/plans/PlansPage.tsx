@@ -15,7 +15,7 @@ import {
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Plus, Edit, Trash2, Package, Download, Upload, DollarSign } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export const PlansPage: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
