@@ -433,11 +433,10 @@ async getContracts(): Promise<Contract[]> {
     await http.delete(`/api/routers/${id}`);
   }
 
-  async getRouterStats(routerId: string): Promise<RouterStats> {
-    return generateRouterStats(routerId);
+  async getRouterStats(id: string): Promise<RouterStats> {
+    const { data } = await http.get(`/api/routers/${id}/stats`);
+    return data;
   }
-
-  
 
   // ============================
   // ===== MONITOREO MOCK ======
@@ -456,10 +455,29 @@ async getContracts(): Promise<Contract[]> {
   // ===== TEST ROUTER =========
   // ============================
 
+  // async testRouterConnection(id: string): Promise<boolean> {
+  //   const response = await http.get(`/api/routers/${id}`);
+  //   return response.data.success;
+  // }
+
+  // Solo prueba conexión (GET)
+  // async testRouterConnection(id: string): Promise<boolean> {
+  //   const { data } = await http.get(`/api/routers/${id}/test`);
+  //   return data.success;
+  // }
+
+  // Activar router real (POST)
   async testRouterConnection(id: string): Promise<boolean> {
-    const response = await http.post(`/servers/test/${id}`);
-    return response.data.success;
+    const { data } = await http.post(`/api/routers/${id}/activate`);
+    return data.success;
   }
+
+    async activateRouter(id: string): Promise<boolean> {
+    const { data } = await http.post(`/api/routers/${id}/activate`);
+    return data.success;
+  }
+
+
 
 // ============================
 // ===== DASHBOARD ============
