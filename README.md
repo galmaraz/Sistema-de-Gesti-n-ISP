@@ -1,7 +1,8 @@
 
   # Sistema de Gestión ISP
 
-  This is a code bundle for Sistema de Gestión ISP. The original project is available at https://www.figma.com/design/YKUccJm0PtR0HNjozT0dEQ/Sistema-de-Gesti%C3%B3n-ISP.
+  figma
+  https://www.figma.com/design/dmNyYEejyj4r1VeygZURcR/proyecto-tecnologiaInt?node-id=0-1&t=cDfuWmIcRjTdk3aw-1
 
   ## Running the code
 
